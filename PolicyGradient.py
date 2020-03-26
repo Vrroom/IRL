@@ -87,21 +87,6 @@ def teachToMimic (model, trajectoryFile, lr, weight_decay, batch_size, showPlot=
 
     return losses[-1]
 
-class PolicyNet (nn.Module) :
-    
-    def __init__ (self, dims) : 
-        super(PolicyNet, self).__init__()
-        layerDims = zip(dims[:-1], dims[1:-1])
-        self.layers = nn.ModuleList([nn.Linear(a,b) for a, b in layerDims])
-        self.last = nn.Linear(dims[-2], dims[-1])
-        self.dropout = nn.Dropout(p=0.5)
-        self.logSoftmax = nn.LogSoftmax(dim=-1)
-
-    def forward (self, x) :
-        x = reduce(lambda y, f : F.relu(self.dropout(f(y))), self.layers, x)
-        x = self.last(x)
-        return self.logSoftmax(x)
-
 def getAction (model, s) : 
     pmf = model(toTensor(s))
     action = Categorical(pmf).sample()
@@ -111,22 +96,12 @@ def getBestAction(model, s) :
     pmf = model(toTensor(s))
     return pmf.detach().numpy().argmax()
 
-def train (env, gamma, lr, weight_decay, save=True) :
+def train (model, env, gamma, lr, weight_decay, save=True) :
 
     def logStep () : 
         S.append(s)
         A.append(a)
         R.append(r)
-
-    def computeReturns () :
-        g = 0
-        G = []
-        for r in R[::-1] : 
-            g = g * gamma + r
-            G.insert(0, g)
-        G = np.array(G)
-        G = (G - G.mean()) / (G.std() + 1e-7)
-        return G
 
     def gradientDescent () : 
         optimizer.zero_grad()
@@ -134,19 +109,9 @@ def train (env, gamma, lr, weight_decay, save=True) :
         loss = 0
         for s, a, g in zip(S, A, G) : 
             loss -= g * torch.log(model(toTensor(s))[a])
-        total_norm = 0
-        print('loss', loss)
         loss.backward()
-        for p in model.parameters():
-            if p.grad is not None : 
-                param_norm = p.grad.data.norm(2)
-                total_norm += param_norm.item() ** 2
-        total_norm = total_norm ** (1. / 2)
-        print('Grad norm', total_norm)
-
         optimizer.step()
 
-    model = PolicyNet(6, 2)
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     episode = 0
     
@@ -156,21 +121,18 @@ def train (env, gamma, lr, weight_decay, save=True) :
         S, A, R = [], [], []
 
         while not done : 
-            a = getAction(model, s)
+            a = getBestAction(model, s)
             s, r, done, info = env.step(a)
             logStep()
 
-        gradientDescent()
-
+        # gradientDescent()
         episode += 1
         print(episode, sum(R))
 
-    if save : 
-        torch.save(model, './Models/acrobotREINFORCE.pkl')
-
 def main () : 
-    # env = gym.make('Acrobot-v1')
-    # train(env, gamma=0.99, lr=1e-2, weight_decay=0)
+    env = gym.make('Acrobot-v1')
+    model = torch.load('./Models/acrobotMimicer.pkl')
+    train(model, env, gamma=0.99, lr=0, weight_decay=0.)
     # with open( './Trajectories/acrobot-trajectory.pkl', 'rb') as fd :
     #     trajectory = pickle.load(fd)
     # trajectory = trajectory[100:]
@@ -185,10 +147,6 @@ def main () :
     # plt.scatter(y[:, 0][actions == 0], y[:, 1][actions == 0], c='b')
     # plt.scatter(y[:, 0][actions == 2], y[:, 1][actions == 2], c='g')
     # plt.show()
-    model = PolicyNet([6, 128, 3])
-    loss = teachToMimic(model, './Trajectories/acrobot-trajectory.pkl', lr=8e-3, batch_size=16, weight_decay=1e-3)
-    torch.save(model, './Models/acrobotMimicer.pkl')
-    print(loss)
 
 
 if __name__ == "__main__" :
