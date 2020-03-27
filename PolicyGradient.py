@@ -4,16 +4,16 @@ import torch
 from functools import partial, reduce
 from itertools import product
 from sklearn.manifold import TSNE
+import torch.nn as nn
 import numpy as np
 import gym
-import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
 from torch.distributions import Categorical
 import random
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
 from Utils import *
+from Network import FeedForwardNetwork
 
 class TrajectoryDataset (Dataset) :
 
@@ -60,7 +60,7 @@ def teachToMimic (model, trajectoryFile, lr, weight_decay, batch_size, showPlot=
         Whether to save the model
     """
     epochs = list(range(100))
-    criterion = nn.NLLLoss()
+    criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
 
     dataset = TrajectoryDataset(trajectoryFile)
@@ -131,8 +131,12 @@ def train (model, env, gamma, lr, weight_decay, save=True) :
 
 def main () : 
     env = gym.make('Acrobot-v1')
-    model = torch.load('./Models/acrobotMimicer.pkl')
-    train(model, env, gamma=0.99, lr=0, weight_decay=0.)
+    model = FeedForwardNetwork([6, 128, 3])
+    loss = teachToMimic(model, './Trajectories/acrobot-trajectory.pkl', 0.008, 0.001, 16)
+    torch.save(model, './Models/acrobotMimicer.pkl')
+    print(loss)
+    # model = torch.load('./Models/acrobotMimicer.pkl')
+    # train(model, env, gamma=0.99, lr=0, weight_decay=0.)
     # with open( './Trajectories/acrobot-trajectory.pkl', 'rb') as fd :
     #     trajectory = pickle.load(fd)
     # trajectory = trajectory[100:]

@@ -39,18 +39,22 @@ def monteCarlo(valFn, rewardFn,  env, agent, gamma, lr):
         trajectory = getTrajectory(env, agent)
         states = unzip(trajectory)[0]
         R = list(map(rewardFn, states))
-        G = computeReturns(R, normalize=False)
+        G = computeReturns(R, gamma, normalize=False)
 
         for step, g in zip(trajectory, G) : 
             s, _, _ = step
 
             valFn.zero_grad()
-            v = valFn(s)
+            v = valFn(toTensor(s))
             v.backward()
 
             updateWts() 
+            print(list(valFn.parameters()))
 
-def td0(valFn, env, agent, gamma, lr):
+    import pdb
+    pdb.set_trace()
+
+def td0(valFn, rewardFn, env, agent, gamma, lr):
     """
     Semi-Gradient TD(0) Algorithm for 
     estimating V^{\pi}.
@@ -92,10 +96,9 @@ def td0(valFn, env, agent, gamma, lr):
             s_, _, _ = step2
 
             r = rewardFn(s)
-
-            valFun.zero_grad()
-            vs = valFun(s)
-            vs_ = valFun(s_)
+            valFn.zero_grad()
+            vs = valFn(toTensor(s))
+            vs_ = valFn(toTensor(s_))
             vs.backward()
             updateWts() 
 

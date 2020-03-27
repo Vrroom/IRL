@@ -5,6 +5,8 @@ from ValueApproximation import *
 from Network import FeedForwardNetwork
 from AcrobotUtils import *
 from pulp import *
+import Agents
+from PlotUtils import *
 
 def inverseRL (env, agent, gamma, valueEstimator, 
     rewardBases, valueBases) :
@@ -57,18 +59,26 @@ def inverseRL (env, agent, gamma, valueEstimator,
         """
         Encode the LP objective from the paper.
         """
-        alphas = [LpVariable(f'a{i}', -1, 1) for i in range(len(valueBasis))]
+        nonlocal problem
+        alphas = [LpVariable(f'a{i}', -1, 1) for i in range(len(valueBases))]
         actions = set(range(env.action_space.n))
+        bs = []
         for i, s in enumerate(stateSamples) : 
             b = LpVariable(f'b{i}')
-            problem += b
+            bs.append(b)
             a = agent(s)
-            s1 = sampleNextState(env, s, a)
+            s1 = toTensor(sampleNextState(env, s, a))
             for ai in actions - {a} : 
-                si = sampleNextState(env, s, ai)
-                terms = [(vFn(s1) - vFn(si)) * alpha for vFn, alpha in zip(valueBasis, alphas)]
-                constraint = b <= lpSum(terms)
-                problem += constraint
+                si = toTensor(sampleNextState(env, s, ai))
+                coeffs = [(vFn(s1)-vFn(si)).item() for vFn in valueBases]
+                terms = [c * a for c, a in zip(coeffs, alphas)]
+                tP = LpVariable(f'tP_{i}_{ai}', 0)
+                tN = LpVariable(f'tN_{i}_{ai}', 0)
+                constraint1 = tP - tN == lpSum(terms)
+                constraint2 = b <= tP - 2*tN
+                problem += constraint1
+                problem += constraint2
+        problem += lpSum(bs)
             
     def rewardFunction (s) : 
         rTotal = 0
@@ -76,19 +86,21 @@ def inverseRL (env, agent, gamma, valueEstimator,
             rTotal += (a * fn(s))
         return rTotal
 
-    stateSamples = [env.observation_space.sample() for _ in range(n)]
+    stateSamples = [env.observation_space.sample() for _ in range(1)]
 
     # Tweak the value function approximator's 
     # parameters to fit to the value function
     # under given policy and for each reward
     # basis.
     for vFn, rFn in zip(valueBases, rewardBases) :
-        valueEstimator(vFn, rFn, env, agent, gamma, 1e-1)
-    
+        valueEstimator(vFn, rFn, env, agent, gamma, 1e-2)
+
     problem = LpProblem('Inverse RL Problem', LpMaximize)
     setupObjective()
     problem.solve()
-    alphas = [a.varValue for a in problem.variables()]
+    import pdb
+    pdb.set_trace()
+    alphas = [a.varValue for a in problem.variables() if a.name.startswith('a')]
 
     return rewardFunction
 
@@ -96,6 +108,9 @@ if __name__ == "__main__" :
     env = gym.make('Acrobot-v1')
     agent = Agents.REINFORCE('./Models/acrobotMimicer.pkl')  
     gamma = 0.99
-    bases = acrobotRewardBases(0.4, 0.4)
-    valBases = [FeedForwardNetwork([6, 3]) for _ in range(len(bases))]
-    R = inverseRL(env, agent, gamma, monteCarlo, bases, valBases)
+    bases = acrobotRewardBases(1, 1)
+    valBases = [FeedForwardNetwork([6, 1]) for _ in range(len(bases))]
+    R = inverseRL(env, agent, gamma, td0, bases, valBases)
+    xRange = np.arange(-1, 1, 0.1)
+    yRange = np.arange(-1, 1, 0.1)
+    plotFunction(lambda x, y : R([x, y, 0, 0, 0, 0]), xRange, yRange)

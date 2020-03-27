@@ -30,7 +30,7 @@ def getTrajectory (env, agent) :
         s = s_
     return trajectory
 
-def computeReturns(R, normalize=True) : 
+def computeReturns(R, gamma, normalize=True) : 
     g = 0
     G = []
     for r in R[::-1] : 
@@ -47,5 +47,5 @@ def inRange(a, interval) :
     is in the given interval.
     """
     lo, hi = interval
-    return num >= 0 and num < hi
+    return a >= lo and a < hi
 
