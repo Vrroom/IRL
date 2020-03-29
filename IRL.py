@@ -72,10 +72,8 @@ def inverseRL (env, agent, gamma, valueEstimator,
                 si = toTensor(sampleNextState(env, s, ai))
                 coeffs = [(vFn(s1)-vFn(si)).item() for vFn in valueBases]
                 terms = [c * a for c, a in zip(coeffs, alphas)]
-                tP = LpVariable(f'tP_{i}_{ai}', 0)
-                tN = LpVariable(f'tN_{i}_{ai}', 0)
-                constraint1 = tP - tN == lpSum(terms)
-                constraint2 = b <= tP - 2*tN
+                constraint1 = b <= 2 * lpSum(terms)
+                constraint2 = b <= lpSum(terms)
                 problem += constraint1
                 problem += constraint2
         problem += lpSum(bs)
@@ -95,6 +93,8 @@ def inverseRL (env, agent, gamma, valueEstimator,
     for vFn, rFn in zip(valueBases, rewardBases) :
         valueEstimator(vFn, rFn, env, agent, gamma, 1e-2)
 
+    import pdb
+    pdb.set_trace()
     problem = LpProblem('Inverse RL Problem', LpMaximize)
     setupObjective()
     problem.solve()
