@@ -67,15 +67,13 @@ def inverseRL (env, agent, gamma, valueEstimator,
             b = LpVariable(f'b{i}')
             bs.append(b)
             a = agent(s)
-            s1 = toTensor(sampleNextState(env, s, a))
+            s1 = toTensor(mountainSampleNextState(env, s, a))
             for ai in actions - {a} : 
-                si = toTensor(sampleNextState(env, s, ai))
+                si = toTensor(mountainSampleNextState(env, s, ai))
                 coeffs = [(vFn(s1)-vFn(si)).item() for vFn in valueBases]
                 terms = [c * a for c, a in zip(coeffs, alphas)]
-                tP = LpVariable(f'tP_{i}_{ai}', 0)
-                tN = LpVariable(f'tN_{i}_{ai}', 0)
-                constraint1 = tP - tN == lpSum(terms)
-                constraint2 = b <= tP - 2*tN
+                constraint1 = b <= 2 * lpSum(terms)
+                constraint2 = b <= lpSum(terms)
                 problem += constraint1
                 problem += constraint2
         problem += lpSum(bs)
@@ -93,24 +91,23 @@ def inverseRL (env, agent, gamma, valueEstimator,
     # under given policy and for each reward
     # basis.
     for vFn, rFn in zip(valueBases, rewardBases) :
-        valueEstimator(vFn, rFn, env, agent, gamma, 1e-2)
+        valueEstimator(vFn, rFn, env, agent, gamma, 1e-1)
 
     problem = LpProblem('Inverse RL Problem', LpMaximize)
     setupObjective()
     problem.solve()
-    import pdb
-    pdb.set_trace()
     alphas = [a.varValue for a in problem.variables() if a.name.startswith('a')]
 
     return rewardFunction
 
 if __name__ == "__main__" :
-    env = gym.make('Acrobot-v1')
-    agent = Agents.REINFORCE('./Models/acrobotMimicer.pkl')  
+    env = gym.make('MountainCar-v0')
+    agent = Agents.REINFORCE('./Models/mountainCarMimicer.pkl')  
+    s = env.reset()
     gamma = 0.99
-    bases = acrobotRewardBases(1, 1)
-    valBases = [FeedForwardNetwork([6, 1]) for _ in range(len(bases))]
+    bases = mountainCarRewardBases(0.2)
+    valBases = [FeedForwardNetwork([2, 1]) for _ in range(len(bases))]
     R = inverseRL(env, agent, gamma, td0, bases, valBases)
-    xRange = np.arange(-1, 1, 0.1)
-    yRange = np.arange(-1, 1, 0.1)
-    plotFunction(lambda x, y : R([x, y, 0, 0, 0, 0]), xRange, yRange)
+    xRange = np.arange(-1.2, 0.6, 0.1)
+    yRange = np.arange(-0.07, 0.07, 0.1)
+    plotFunction(lambda x, y : R([x, y]), xRange, yRange)

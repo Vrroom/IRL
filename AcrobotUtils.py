@@ -102,6 +102,15 @@ def wrap(x, m, M):
         x = x + diff
     return x
 
+def mountainSampleNextState(env, s, a) :
+    position, velocity = s
+    velocity += (a-1)*env.force + np.cos(3*position)*(-env.gravity)
+    velocity = np.clip(velocity, -env.max_speed, env.max_speed)
+    position += velocity
+    position = np.clip(position, env.min_position, env.max_position)
+    if (position==env.min_position and velocity<0): velocity = 0
+    return np.array([position, velocity])
+
 def sampleNextState (env, s, a) : 
     """
     The OpenAI Acrobot environment doesn't 
@@ -180,6 +189,14 @@ def stepFunction (s, xRange, yRange) :
     x, y = s[0], s[1]
     inRectangle = inRange(x, xRange) and inRange(y, yRange)
     return 0 if inRectangle else -1
+
+def mountainCarRewardBases (delX) :
+    xs = np.arange(-1.2, 0.6, delX) 
+    bases = []
+    for interval in zip(xs, xs[1:]) :
+        fn = lambda t : 0 if inRange(t[0], interval) else -1
+        bases.append(fn)
+    return bases
 
 def acrobotRewardBases (delX, delY) : 
     """

@@ -1,5 +1,9 @@
 from Utils import * 
 from more_itertools import *
+from Network import *
+from PlotUtils import plotFunction
+import gym
+import Agents
 
 def monteCarlo(valFn, rewardFn,  env, agent, gamma, lr):
     """
@@ -102,4 +106,15 @@ def td0(valFn, rewardFn, env, agent, gamma, lr):
             vs.backward()
             updateWts() 
 
-
+if __name__ == "__main__" : 
+    env = gym.make('MountainCar-v0')
+    agent = Agents.REINFORCE('./Models/mountainCarMimicer.pkl')
+    s = env.reset()
+    rFn = lambda x : 0 if x[0] > -2 and x[0] < 1 else -1
+    vFn = FeedForwardNetwork([2, 1])
+    td0(vFn, rFn, env, agent, 0.99, 1)
+    hi = env.observation_space.high
+    lo = env.observation_space.low
+    X = np.arange(lo[0], hi[0], 0.1)
+    Y = np.arange(lo[1], hi[1], 0.1)
+    plotFunction(lambda x, y: vFn(toTensor([x, y])).item(), X, Y)
