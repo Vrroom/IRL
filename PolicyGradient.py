@@ -31,7 +31,6 @@ class TrajectoryDataset (Dataset) :
         """
         with open(pickleFilePath, 'rb') as fd :
             self.trajectory = pickle.load(fd)
-        self.trajectory = self.trajectory[:200]
 
     def __len__ (self) :
         return len(self.trajectory)
@@ -130,11 +129,17 @@ def train (model, env, gamma, lr, weight_decay, save=True) :
         print(episode, sum(R))
 
 def main () : 
-    env = gym.make('Acrobot-v1')
-    model = FeedForwardNetwork([6, 128, 3])
-    loss = teachToMimic(model, './Trajectories/acrobot-trajectory.pkl', 0.008, 0.001, 16)
-    torch.save(model, './Models/acrobotMimicer.pkl')
-    print(loss)
+    env = gym.make('MountainCar-v0')
+    print(env.observation_space)
+    dims = [ [2, 32, 3] ]
+    lrs = [1e-1]
+    batches = [128]
+    wts = [0]
+    for d, l, b, w in product(dims, lrs, batches, wts) :
+        model = FeedForwardNetwork(d)
+        loss = teachToMimic(model,  './Trajectories/mountainCar-trajectory.pkl', l, w, b)
+        print(d, l, b, w, loss)
+        torch.save(model, './Models/mountainCarMimicer.pkl')
     # model = torch.load('./Models/acrobotMimicer.pkl')
     # train(model, env, gamma=0.99, lr=0, weight_decay=0.)
     # with open( './Trajectories/acrobot-trajectory.pkl', 'rb') as fd :
