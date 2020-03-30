@@ -10,6 +10,9 @@ def findTheta (sin, cos) :
     Calculate theta in radians
     from sin and cosine values.
 
+    The output is in the range 
+    [-pi, pi]
+
     Parameters
     ----------
     sin : float
@@ -19,9 +22,13 @@ def findTheta (sin, cos) :
         return np.pi / 2
     elif sin == -1 and cos == 0 : 
         return -np.pi / 2
-    else :
+    elif cos > 0 : 
         return np.arctan(sin / cos)
-
+    elif sin > 0 : 
+        return np.pi + np.arctan(sin / cos)
+    else : 
+        return -np.pi + np.arctan(sin / cos)
+        
 def toInternalStateRep (s) : 
     """
     The acrobot environment maintains an
@@ -185,7 +192,7 @@ def acrobotRewardBases (delX, delY) :
     """
     The reward bases are a collection of step
     functions which cover the interval
-    [-1, 1] x [-1, 1] in R^2. 
+    [-pi, pi] x [-pi, pi] in R^2. 
 
     The reward bases look at the first two 
     components of the state. This the cos and 
@@ -206,8 +213,8 @@ def acrobotRewardBases (delX, delY) :
         The size of the rectangle
         along y-axis.
     """
-    xs = np.arange(-1, 1, delX)
-    ys = np.arange(-1, 1, delY)
+    xs = np.arange(-np.pi, np.pi, delX)
+    ys = np.arange(-np.pi, np.pi, delY)
     bases = []
     for x, y in product(xs, ys) : 
         x_, y_ = x + delX, y + delY

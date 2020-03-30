@@ -1,4 +1,6 @@
 from Utils import * 
+import dill
+import pickle
 import gym
 import numpy as np
 from ValueApproximation import *
@@ -8,7 +10,7 @@ from pulp import *
 import Agents
 from PlotUtils import *
 
-def inverseRL (env, agent, gamma, valueEstimator, 
+def inverseRL (env, agent, gamma, valueEstimator, featureExtractor,
     rewardBases, valueBases) :
     """
     Applying section 4 of: 
@@ -45,6 +47,9 @@ def inverseRL (env, agent, gamma, valueEstimator,
         function. Examples are monteCarlo
         and td0 present in 
         ValueApproximation.py.
+    featureExtractor : function
+        Ouputs a succint representation
+        of the state.
     rewardBases : list
         List of basis functions 
         characterizing the reward.
@@ -84,33 +89,30 @@ def inverseRL (env, agent, gamma, valueEstimator,
             rTotal += (a * fn(s))
         return rTotal
 
-    stateSamples = [env.observation_space.sample() for _ in range(1)]
+    stateSamples = [env.observation_space.sample() for _ in range(100)]
 
     # Tweak the value function approximator's 
     # parameters to fit to the value function
     # under given policy and for each reward
     # basis.
     for vFn, rFn in zip(valueBases, rewardBases) :
-        valueEstimator(vFn, rFn, env, agent, gamma, 1e-2)
+        valueEstimator(vFn, rFn, env, agent, featureExtractor,  gamma, 1e-2)
 
-    import pdb
-    pdb.set_trace()
     problem = LpProblem('Inverse RL Problem', LpMaximize)
     setupObjective()
     problem.solve()
-    import pdb
-    pdb.set_trace()
     alphas = [a.varValue for a in problem.variables() if a.name.startswith('a')]
-
     return rewardFunction
 
 if __name__ == "__main__" :
+    xRange = np.arange(-np.pi, np.pi, 0.1)
+    yRange = np.arange(-np.pi, np.pi, 0.1)
+    plotFunction(lambda x, y : -np.cos(x) - np.cos(x + y) > 1, xRange, yRange)
     env = gym.make('Acrobot-v1')
     agent = Agents.REINFORCE('./Models/acrobotMimicer.pkl')  
-    gamma = 0.99
-    bases = acrobotRewardBases(1, 1)
-    valBases = [FeedForwardNetwork([6, 1]) for _ in range(len(bases))]
-    R = inverseRL(env, agent, gamma, td0, bases, valBases)
-    xRange = np.arange(-1, 1, 0.1)
-    yRange = np.arange(-1, 1, 0.1)
+    gamma = 0.7
+    bases = acrobotRewardBases(0.5, 0.5)
+    valBases = [FeedForwardNetwork([6, 1]) for _ in bases]
+    featureExtractor = lambda s : toInternalStateRep(s)[:2]
+    R = inverseRL(env, agent, gamma, td0, featureExtractor, bases, valBases)
     plotFunction(lambda x, y : R([x, y, 0, 0, 0, 0]), xRange, yRange)

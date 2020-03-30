@@ -1,7 +1,8 @@
 from Utils import * 
+import functional
 from more_itertools import *
 
-def monteCarlo(valFn, rewardFn,  env, agent, gamma, lr):
+def monteCarlo(valFn, rewardFn, env, agent, featureExtractor, gamma, lr):
     """
     Gradient Monte Carlo Algorithm for 
     estimating V^{\pi}.
@@ -23,6 +24,9 @@ def monteCarlo(valFn, rewardFn,  env, agent, gamma, lr):
     agent : object
         The policy function. Mapping
         states to actions.
+    featureExtractor : function
+        Computes a succint representation
+        of the state.
     gamma : float
         Discount factor of the MDP.
     lr : float
@@ -34,11 +38,11 @@ def monteCarlo(valFn, rewardFn,  env, agent, gamma, lr):
                 # Update rule from Sutton and Barto
                 wt.data.add_(lr * (g - v) * wt.grad)
 
-    episodes = 100
+    episodes = 20
     for episode in range(episodes) : 
         trajectory = getTrajectory(env, agent)
         states = unzip(trajectory)[0]
-        R = list(map(rewardFn, states))
+        R = list(map(compose(rewardFn, featureExtractor), states))
         G = computeReturns(R, gamma, normalize=False)
 
         for step, g in zip(trajectory, G) : 
@@ -49,12 +53,8 @@ def monteCarlo(valFn, rewardFn,  env, agent, gamma, lr):
             v.backward()
 
             updateWts() 
-            print(list(valFn.parameters()))
 
-    import pdb
-    pdb.set_trace()
-
-def td0(valFn, rewardFn, env, agent, gamma, lr):
+def td0(valFn, rewardFn, env, agent, featureExtractor, gamma, lr):
     """
     Semi-Gradient TD(0) Algorithm for 
     estimating V^{\pi}.
@@ -76,6 +76,9 @@ def td0(valFn, rewardFn, env, agent, gamma, lr):
     agent : object
         The policy function. Mapping
         states to actions.
+    featureExtractor : function
+        Computes a succint representation
+        of the state.
     gamma : float
         Discount factor of the MDP.
     lr : float
@@ -87,7 +90,7 @@ def td0(valFn, rewardFn, env, agent, gamma, lr):
                 # Update rule from Sutton and Barto
                 wt.data.add_(lr * (r + gamma * vs_ - vs) * wt.grad)
 
-    episodes = 100
+    episodes = 5
     for episode in range(episodes) : 
         trajectory = getTrajectory(env, agent)
 
@@ -95,11 +98,12 @@ def td0(valFn, rewardFn, env, agent, gamma, lr):
             s, _, _ = step1
             s_, _, _ = step2
 
-            r = rewardFn(s)
+            r = rewardFn(featureExtractor(s))
             valFn.zero_grad()
-            vs = valFn(toTensor(s))
+
+            vs  = valFn(toTensor(s ))
             vs_ = valFn(toTensor(s_))
+
             vs.backward()
             updateWts() 
-
 
