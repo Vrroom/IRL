@@ -1,4 +1,4 @@
-# Inverse Reinforcement learning on Mountain Car Environment
+# Inverse Reinforcement learning on Acrobot Environment
 
 ```python3 IRL.py```
 
