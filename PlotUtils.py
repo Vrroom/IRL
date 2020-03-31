@@ -4,7 +4,7 @@ from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import numpy as np
 
-def plotFunction (f, xRange, yRange) : 
+def plotFunction (f, xRange, yRange, xLabel, yLabel, zLabel) : 
     """
     Create a 3D plot of the function 
     over xRange x yRange.
@@ -31,4 +31,7 @@ def plotFunction (f, xRange, yRange) :
     surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm,
                            linewidth=0, antialiased=False)
     fig.colorbar(surf, shrink=0.5, aspect=5)
+    ax.set_xlabel(xLabel)
+    ax.set_ylabel(yLabel)
+    ax.set_zlabel(zLabel)
     plt.show()

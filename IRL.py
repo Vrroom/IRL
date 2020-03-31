@@ -89,14 +89,15 @@ def inverseRL (env, agent, gamma, valueEstimator, featureExtractor,
             rTotal += (a * fn(s))
         return rTotal
 
-    stateSamples = [env.observation_space.sample() for _ in range(100)]
+    trajectory = getTrajectory(env, agent)
+    stateSamples = [t[0] for t in trajectory]
 
     # Tweak the value function approximator's 
     # parameters to fit to the value function
     # under given policy and for each reward
     # basis.
     for vFn, rFn in zip(valueBases, rewardBases) :
-        valueEstimator(vFn, rFn, env, agent, featureExtractor,  gamma, 1e-2)
+        valueEstimator(vFn, rFn, env, agent, featureExtractor,  gamma, 1e-1)
 
     problem = LpProblem('Inverse RL Problem', LpMaximize)
     setupObjective()
@@ -107,12 +108,12 @@ def inverseRL (env, agent, gamma, valueEstimator, featureExtractor,
 if __name__ == "__main__" :
     xRange = np.arange(-np.pi, np.pi, 0.1)
     yRange = np.arange(-np.pi, np.pi, 0.1)
-    plotFunction(lambda x, y : -np.cos(x) - np.cos(x + y) > 1, xRange, yRange)
+    plotFunction(lambda x, y : (-1 + (-np.cos(x) - np.cos(x + y) > 1)), xRange, yRange, 'theta1', 'theta2', 'reward')
     env = gym.make('Acrobot-v1')
     agent = Agents.REINFORCE('./Models/acrobotMimicer.pkl')  
     gamma = 0.7
     bases = acrobotRewardBases(0.5, 0.5)
     valBases = [FeedForwardNetwork([6, 1]) for _ in bases]
     featureExtractor = lambda s : toInternalStateRep(s)[:2]
-    R = inverseRL(env, agent, gamma, td0, featureExtractor, bases, valBases)
-    plotFunction(lambda x, y : R([x, y, 0, 0, 0, 0]), xRange, yRange)
+    R = inverseRL(env, agent, gamma, td1, featureExtractor, bases, valBases)
+    plotFunction(lambda x, y : R([x, y, 0, 0, 0, 0]), xRange, yRange, 'theta1', 'theta2', 'reward')

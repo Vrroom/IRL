@@ -1,6 +1,11 @@
+from Network import *
+import Agents
+import gym
 from Utils import * 
 import functional
+from AcrobotUtils import *
 from more_itertools import *
+from PlotUtils import *
 
 def monteCarlo(valFn, rewardFn, env, agent, featureExtractor, gamma, lr):
     """
@@ -107,3 +112,35 @@ def td0(valFn, rewardFn, env, agent, featureExtractor, gamma, lr):
             vs.backward()
             updateWts() 
 
+def td1 (valFn, rewardFn, env, agent, featureExtractor, gamma, lr) :
+    episodes = 10
+    trajectories = [[t[0] for t in getTrajectory(env, agent)] for _ in range(episodes)]
+    rewards = [[rewardFn(featureExtractor(s)) for s in t] for t in trajectories]
+    returns = [computeReturns(r, gamma, normalize=False) for r in rewards]
+
+    trajectories = [toTensor(t) for t in trajectories]
+    returns = [toTensor(r) for r in returns]
+
+    optimizer = torch.optim.Adam(valFn.parameters(), lr=lr)
+    epochs = 200
+    for epoch in range(epochs) : 
+        for t, r in zip(trajectories, returns) : 
+            optimizer.zero_grad()
+            estimatedReturn = valFn(t) 
+            diff = estimatedReturn - r
+            loss = torch.sum(diff * diff)
+            loss.backward()
+            optimizer.step()
+
+if __name__ == "__main__" : 
+    env = gym.make('Acrobot-v1')
+    agent = Agents.REINFORCE('./Models/acrobotMimicer.pkl')
+    rFn = lambda x : -1
+    vFn = FeedForwardNetwork([6, 1])
+    featureExtractor = lambda s : toInternalStateRep(s)[:2]
+    td1(vFn, rFn, env, agent, featureExtractor, 0.99, 1e-1)
+    hi = env.observation_space.high
+    lo = env.observation_space.low
+    X = np.arange(-np.pi, np.pi, 0.1)
+    Y = np.arange(-np.pi, np.pi, 0.1)
+    plotFunction(lambda x, y: vFn(toTensor([x, y, 0, 0, 0, 0])).item(), X, Y, 'theta1', 'theta2', 'value')

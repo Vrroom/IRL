@@ -12,8 +12,8 @@ def main () :
 
     env = gym.make('Acrobot-v1')
 
-#    agent = Agents.REINFORCE('./Models/acrobotMimicer.pkl')
-    agent = Agents.Human(env)
+    agent = Agents.REINFORCE('./Models/acrobotMimicer.pkl')
+#     agent = Agents.Human(env)
     done = False
     trajectory = []
     s = env.reset()
@@ -28,9 +28,9 @@ def main () :
         time.sleep(0.1)
     
     print(i)
-#    fileName = osp.join('./Trajectories', 'acrobot-trajectory.pkl')
-#    with open(fileName, 'wb') as fd : 
-#        pickle.dump(trajectory, fd)
+    # fileName = osp.join('./Trajectories', 'acrobot-trajectory.pkl')
+    # with open(fileName, 'wb') as fd : 
+    #     pickle.dump(trajectory, fd)
 
     env.close()
 
