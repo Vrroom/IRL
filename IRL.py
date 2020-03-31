@@ -106,8 +106,9 @@ if __name__ == "__main__" :
     s = env.reset()
     gamma = 0.99
     bases = mountainCarRewardBases(0.2)
+    print(len(bases))
     valBases = [FeedForwardNetwork([2, 1]) for _ in range(len(bases))]
     R = inverseRL(env, agent, gamma, td0, bases, valBases)
     xRange = np.arange(-1.2, 0.6, 0.1)
-    yRange = np.arange(-0.07, 0.07, 0.1)
-    plotFunction(lambda x, y : R([x, y]), xRange, yRange)
+    yRange = np.arange(-0.07, 0.07, 0.01)
+    plotFunction(lambda x, y : R([x, y]), xRange, yRange, 'pos', 'vel', 'reward')
