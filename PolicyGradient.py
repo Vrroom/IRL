@@ -105,7 +105,7 @@ def train (model, env, gamma, lr, weight_decay, save=True) :
 
     def gradientDescent () : 
         optimizer.zero_grad()
-        G = computeReturns()
+        G = computeReturns(R, gamma)
         loss = 0
         for s, a, g in zip(S, A, G) : 
             loss -= g * torch.log(model(toTensor(s))[a])
@@ -125,18 +125,18 @@ def train (model, env, gamma, lr, weight_decay, save=True) :
             s, r, done, info = env.step(a)
             logStep()
 
-        # gradientDescent()
+        gradientDescent()
         episode += 1
         print(episode, sum(R))
 
 def main () : 
     env = gym.make('Acrobot-v1')
-    model = FeedForwardNetwork([6, 128, 3])
-    loss = teachToMimic(model, './Trajectories/acrobot-trajectory.pkl', 0.008, 0.001, 16)
-    torch.save(model, './Models/acrobotMimicer.pkl')
-    print(loss)
+    model = FeedForwardNetwork([6, 32, 3])
+    # loss = teachToMimic(model, './Trajectories/acrobot-trajectory.pkl', 0.008, 0.001, 16)
+    # torch.save(model, './Models/acrobotMimicer.pkl')
+    # print(loss)
     # model = torch.load('./Models/acrobotMimicer.pkl')
-    # train(model, env, gamma=0.99, lr=0, weight_decay=0.)
+    train(model, env, gamma=0.99, lr=0.1, weight_decay=0.)
     # with open( './Trajectories/acrobot-trajectory.pkl', 'rb') as fd :
     #     trajectory = pickle.load(fd)
     # trajectory = trajectory[100:]

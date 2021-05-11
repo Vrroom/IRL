@@ -13,7 +13,7 @@ def main () :
     env = gym.make('Acrobot-v1')
 
     agent = Agents.REINFORCE('./Models/acrobotMimicer.pkl')
-#     agent = Agents.Human(env)
+    # agent = Agents.Human(env)
     done = False
     trajectory = []
     s = env.reset()
