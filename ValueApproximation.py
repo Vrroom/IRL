@@ -1,5 +1,4 @@
 from Network import *
-import Agents
 import gym
 from Utils import * 
 import functional
@@ -135,7 +134,7 @@ def td1 (valFn, rewardFn, env, agent, featureExtractor, gamma, lr) :
 if __name__ == "__main__" : 
     env = gym.make('Acrobot-v1')
     agent = Agents.REINFORCE('./Models/acrobotMimicer.pkl')
-    rFn = lambda x : -1
+    rFn = lambda x : 0
     vFn = FeedForwardNetwork([6, 128, 1])
     featureExtractor = lambda s : toInternalStateRep(s)[:2]
     td1(vFn, rFn, env, agent, featureExtractor, 0.99, 1e-1)
