@@ -2,29 +2,17 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from functools import partial, reduce
+import Config as C
 
 class AcrobotNet (nn.Module) :
     """
     Simple multi-layer feed forward network
     with ReLU non linearity.
     """
-    def __init__ (self, s_shape=6, a_shape=3, hdims=[128]) : 
-        """
-        Constructor.
-        
-        Parameters
-        ----------
-        dims : list
-            A list of integers indicating the 
-            input/output dimensions of each 
-            layer.
-        bias : bool
-            Whether to have bias in the last
-            layer.
-        """
+    def __init__ (self, s=6, a=3, hdims=C.HDIMS) : 
         super(AcrobotNet, self).__init__()
-        self.shared = self.buildff([s_shape, *hdims])
-        self.pi = nn.Linear(hdims[-1], a_shape)
+        self.shared = self.buildff([s, *hdims])
+        self.pi = nn.Linear(hdims[-1], a)
         self.v = nn.Linear(hdims[-1], 1)
         self.dropout = nn.Dropout(p=0.5)
 
