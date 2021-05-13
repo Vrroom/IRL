@@ -16,7 +16,7 @@ from bayes_opt.logger import JSONLogger
 
 run_ID = 0
 
-def build_and_train(discount, log_lr, vlc, elc, cuda_idx=None, n_parallel=4):
+def build_and_train(discount, log_lr, vlc, elc, cuda_idx=0, n_parallel=8):
     global run_ID
     affinity = dict(cuda_idx=cuda_idx, workers_cpus=list(range(n_parallel)))
     sampler = SerialSampler(
@@ -30,17 +30,18 @@ def build_and_train(discount, log_lr, vlc, elc, cuda_idx=None, n_parallel=4):
         eval_max_steps=2500
     )
     algo = A2C(
-        discount=discount, 
+        discount=1 - 10 ** discount, 
         learning_rate=10 ** log_lr,
         value_loss_coeff=vlc,
-        entropy_loss_coeff=elc
+        entropy_loss_coeff=10 ** elc,
+        normalize_advantage=True
     )  
     agent = CategoricalPgAgent(AcrobotNet)
     runner = MinibatchRl(
         algo=algo,
         agent=agent,
         sampler=sampler,
-        n_steps=50e5,
+        n_steps=1e6,
         log_interval_steps=1e5,
         affinity=affinity,
     )
@@ -49,29 +50,19 @@ def build_and_train(discount, log_lr, vlc, elc, cuda_idx=None, n_parallel=4):
     with logger_context(log_dir, run_ID, name, snapshot_mode='all', override_prefix=True):
         runner.train()
     dataframe = pd.read_csv(osp.join(log_dir, f'run_{run_ID}', 'progress.csv'))
-    return dataframe['DiscountedReturnAverage'][-5:].mean()
+    return dataframe['ReturnAverage'][-3:].mean()
 
 def increment_run_id (event, instance) : 
     global run_ID
     run_ID += 1
 
 if __name__ == "__main__":
-    # import argparse
-    # parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    # parser.add_argument('--run_ID', help='run identifier (logging)', type=int, default=0)
-    # parser.add_argument('--cuda_idx', help='gpu to use ', type=int, default=None)
-    # parser.add_argument('--n_parallel', help='number of sampler workers', type=int, default=4)
-    # args = parser.parse_args()
-    # print(build_and_train(
-    #     run_ID=args.run_ID,
-    #     cuda_idx=args.cuda_idx,
-    #     n_parallel=args.n_parallel,
-    # ))
+    import json
     pbounds = dict(
-        discount=(0.7, 1),
-        log_lr=(-6, 0),
-        vlc=(0, 10),
-        elc=(0, 1)
+        discount=(-2, -1.5),
+        log_lr=(-3.5, -2.5),
+        vlc=(0, 1),
+        elc=(-2, -1)
     )
     optimizer = BayesianOptimization(
         f=build_and_train, 

@@ -11,9 +11,8 @@ class AcrobotNet (nn.Module) :
     """
     def __init__ (self, s=6, a=3, hdims=C.HDIMS) : 
         super(AcrobotNet, self).__init__()
-        self.shared = self.buildff([s, *hdims])
-        self.pi = nn.Linear(hdims[-1], a)
-        self.v = nn.Linear(hdims[-1], 1)
+        self.pi = self.buildff([s, *hdims, a])
+        self.v  = self.buildff([s, *hdims, 1])
         self.dropout = nn.Dropout(p=0.5)
 
     def buildff (self, lst) : 
@@ -26,8 +25,11 @@ class AcrobotNet (nn.Module) :
         return F.relu(self.dropout(f(y)))
 
     def forward (self, x, previous_action, previous_reward) :
-        feature = reduce(self.withReluDropout, self.shared, x)
-        pi = F.softmax(self.pi(feature), dim=-1)
-        v = self.v(feature).squeeze(-1)
+        pi = reduce(self.withReluDropout, self.pi[:-1], x)
+        pi = self.pi[-1](pi)
+        pi = F.softmax(pi, dim=-1)
+        v  = reduce(self.withReluDropout, self.v[:-1], x)
+        v  = self.v[-1](v)
+        v  = v.squeeze(-1)
         return pi, v
 
