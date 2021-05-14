@@ -9,7 +9,8 @@ class AcrobotNet (nn.Module) :
     Simple multi-layer feed forward network
     with ReLU non linearity.
     """
-    def __init__ (self, s=6, a=3, hdims=C.HDIMS) : 
+    def __init__ (self, s=C.OBSERVATION_SPACE, 
+            a=C.ACTION_SPACE, hdims=C.HDIMS) : 
         super(AcrobotNet, self).__init__()
         self.pi = self.buildff([s, *hdims, a])
         self.v  = self.buildff([s, *hdims, 1])
