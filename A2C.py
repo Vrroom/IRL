@@ -14,7 +14,7 @@ from bayes_opt import BayesianOptimization
 from bayes_opt.event import DEFAULT_EVENTS, Events
 from bayes_opt.logger import JSONLogger
 
-def findOptimalPolicy (reward, run_ID=0, cuda_idx=None, n_parallel=8) : 
+def findOptimalAgent (reward, run_ID=0, cuda_idx=None, n_parallel=8) : 
     cpus = list(range(n_parallel))
     affinity = dict(cuda_idx=cuda_idx, workers_cpus=cpus)
     sampler = SerialSampler(
@@ -38,8 +38,8 @@ def findOptimalPolicy (reward, run_ID=0, cuda_idx=None, n_parallel=8) :
         algo=algo,
         agent=agent,
         sampler=sampler,
-        n_steps=1e6,
-        log_interval_steps=1e5,
+        n_steps=C.N_STEPS,
+        log_interval_steps=C.LOG_STEP,
         affinity=affinity,
     )
     name = "a2c_" + C.ENV.lower()

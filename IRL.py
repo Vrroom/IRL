@@ -1,5 +1,7 @@
 import numpy as np
 np.random.seed(0)
+import random
+random.seed(0)
 import pickle
 import gym
 import more_itertools
@@ -33,7 +35,7 @@ def generateStateSamples (trajs, nSamples) :
     """ get the distribution of start states """
     allStates = [[s for s, _, _ in t] for t in trajs]
     allStates = list(more_itertools.flatten(allStates))
-    states = np.random.sample(allStates, k=nSamples)
+    states = random.sample(allStates, k=nSamples)
     states = np.array(states)
     return states
 
@@ -44,7 +46,7 @@ def estimateValueFromTrajs (stateIndices, trajs, rewardFn) :
     """
     def computeReturnOnTraj (traj) : 
         R = [rewardFn(s) for s, _, _ in traj]
-        return computeReturns(R, C.GAMMA)[0]
+        return computeReturns(R, C.DISCOUNT)[0]
 
     values = []
     for i, indices in enumerate(stateIndices) : 
@@ -58,9 +60,12 @@ def estimateValueFromAgent (stateSamples, agent) :
     Use the learnt value function network through
     A2C to estimate value for states.
     """
+    value = lambda s : agent.model.v[-1](
+        reduce(agent.model.withReluDropout, 
+            agent.model.v[:-1], s))
     return list(map(
         reduce(compose, [float, 
-                         agent.model.v, 
+                         value, 
                          lambda t : t.float(), 
                          torch.tensor]),
         stateSamples))
@@ -77,20 +82,19 @@ def irl (rewardFnSpace) :
     Find the explanatory reward function for expert's 
     policy in the space of reward functions.
     """
-    import pdb
-    pdb.set_trace()
     trajs = getAllTraj()
     stateSamples = generateStateSamples(trajs, C.IRL_STATE_SAMPLES)
     indices = findSamplesInTrajs(stateSamples, trajs) 
     for i in range(C.IRL_ITR) : 
         rewardFn = rewardFnSpace.current()
         agent = findOptimalAgent(rewardFn)
-        env = rlpyt_make(rewardFn)
         expertValues = [estimateValueFromTrajs(indices, trajs, _) 
                         for _ in rewardFnSpace.rewardBases]
         inferiorValues = estimateValueFromAgent(stateSamples, agent) 
+        import pdb
+        pdb.set_trace()
         rewardFnSpace.refine(expertValues, inferiorValues)
     return pi, rewardFn
 
 if __name__ == "__main__" :
-    irl (acrobotRewardBases(np.pi / 4, np.pi / 4))
+    irl (RewardFnSpace(acrobotRewardBases(np.pi / 4, np.pi / 4)))

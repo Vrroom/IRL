@@ -13,6 +13,8 @@ STATE_SIMILARITY_THRESH = 1e-1
 IRL_STATE_SAMPLES       = 100
 IRL_MONTE_CARLO_SAMPLES = 10
 L1_NORM_GAMMA           = 1.0
+N_STEPS                 = 1e6
+LOG_STEP                = 1e5
 
 with gym.make(ENV) as env : 
     ACTION_SPACE       = env.action_space.n
