@@ -1,6 +1,5 @@
 import torch
 import random
-import PolicyGradient
 
 class Human () :
 
@@ -25,12 +24,4 @@ class Human () :
 
     def __call__ (self, *args, **kwargs):
         return self.action
-
-class REINFORCE () : 
-
-    def __init__ (self, path) :
-        self.model = torch.load(path)
-
-    def __call__ (self, observation) : 
-        return PolicyGradient.getBestAction(self.model, observation)
 

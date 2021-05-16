@@ -1,4 +1,6 @@
 from Utils import *
+from RewardFnSpace import *
+from functional import compose
 from functools import partial, reduce
 from itertools import product
 import numpy as np
@@ -174,58 +176,31 @@ def stepFunction (s, xRange, yRange) :
     Parameters
     ----------
     s : np.ndarray
-        6-D state vector of which
+        4-D state vector of which
         we are interested in the first
         2 dimensions.
     xRange : tuple
     yRange : tuple
         Together, these ranges define a
         rectangle in R^2 over which the
-        reward will be 0. Everywhere 
-        else, reward will be -1. 
+        reward will be -1. Everywhere 
+        else, reward will be 0. 
     """
     x, y = s[0], s[1]
     inRectangle = inRange(x, xRange) and inRange(y, yRange)
-    return 0 if inRectangle else -1
+    return -1 if inRectangle else 0
 
 def acrobotRewardBases (delX, delY) : 
-    """
-    The reward bases are a collection of step
-    functions which cover the interval
-    [-pi, pi] x [-pi, pi] in R^2. 
-
-    The reward bases look at the first two 
-    components of the state. This the cos and 
-    sin value of the angle made by the first
-    link with the vertical.
-    
-    Intuitively, it seems that the angle
-    of the first link is a good enough 
-    indication of having reached the goal
-    state.
-
-    Parameters
-    ----------
-    delX : float
-        The size of the rectangle
-        along x-axis.
-    delY : float
-        The size of the rectangle
-        along y-axis.
-    """
     xs = np.arange(-np.pi, np.pi, delX)
     ys = np.arange(-np.pi, np.pi, delY)
     bases = []
     for x, y in product(xs, ys) : 
         x_, y_ = x + delX, y + delY
-        fn = partial(stepFunction, xRange=(x, x_), yRange=(y, y_))
-        bases.append(fn)
+        fn = compose(
+            partial(stepFunction, 
+                xRange=(x, x_), 
+                yRange=(y, y_)),
+            toInternalStateRep
+        )
+        bases.append(Reward(fn, (-1, 0)))
     return bases
-
-if __name__ == "__main__" :
-    env = gym.make('Acrobot-v1')
-    s = env.reset()
-    s1 = sampleNextState(env, s, 2)
-    s2, _, _, _ = env.step(2)
-    print(np.linalg.norm(s1 - s2))
-

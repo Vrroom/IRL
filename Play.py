@@ -1,4 +1,3 @@
-from tqdm import tqdm
 import os
 import os.path as osp
 import pickle
@@ -6,35 +5,33 @@ import numpy as np
 import gym
 import sys
 import time
-from rlpyt.agents.pg.categorical import CategoricalPgAgent
+from HumanAgent import Human
 from Network import *
 from collections import namedtuple
+import Config as C
 
 def main () : 
-    env = gym.make('Acrobot-v1')
-    EnvSpace = namedtuple('EnvSpace', ['action', 'observation'])
-    agent_dict = torch.load('a2c_acrobot/run_0/itr_147499.pkl')
-    state_dict = agent_dict["agent_state_dict"]
-    agent = CategoricalPgAgent(AcrobotNet)
-    agent.initialize(EnvSpace(env.action_space, env.observation_space))
-    agent.load_state_dict(state_dict)
+    env = gym.make(C.ENV)
+    agent = Human(env)
     done = False
     trajectory = []
-    s = torch.tensor(env.reset()).float()
-    a = torch.tensor(0)
-    r = torch.tensor(0).float()
-    i = 0
+    s = env.reset()
+    a = 0
+    r = 0
+    trajectory.append((s, a, r))
     while not done : 
-        i += 1
         env.render()
-        a = agent.step(s, a, r).action
-        s_, r, done, info = env.step(a.item())
-        s_ = torch.tensor(s_).float()
-        r = torch.tensor(r).float()
+        a = agent(s)
+        s_, r, done, info = env.step(a)
         s = s_
-        time.sleep(0.05)
-    print(f'Finished Episode in {i} steps')
+        trajectory.append((s, a, r))
+        time.sleep(0.1)
     env.close()
-
+    # Save trajectory
+    files = os.listdir(C.TRAJ_DIR)
+    n = len(files)
+    with open(osp.join(C.TRAJ_DIR, f'traj_{n}.pkl'), 'wb') as fd : 
+        pickle.dump(trajectory, fd)
+    
 if __name__ == "__main__" : 
     main ()

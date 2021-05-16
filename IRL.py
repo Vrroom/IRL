@@ -1,119 +1,96 @@
-from Utils import * 
-import dill
+import numpy as np
+np.random.seed(0)
 import pickle
 import gym
-import numpy as np
-from ValueApproximation import *
-from Network import FeedForwardNetwork
+import more_itertools
 from AcrobotUtils import *
 from pulp import *
-import Agents
-from PlotUtils import *
+from scipy.spatial.distance import pdist, squareform
+import os
+import os.path as osp
+import Config as C
+from A2C import *
 
-def inverseRL (env, agent, gamma, valueEstimator, featureExtractor,
-    rewardBases, valueBases) :
+def findSamplesInTrajs (stateSamples, trajs) : 
+    """ 
+    For each state sample, find all indices (i, j) such that
+    the jth state in ith trajectory is approximately the state
+    sample
     """
-    Applying section 4 of: 
-        
-        Algorithms for Inverse Reinforcement Learning
-        - Ng, Russell ('00)
+    nSamples = stateSamples.shape[0]
+    stateOccurenceIndices = [[] for _ in range(nSamples)]
+    allStates = [np.stack([s for s, _, _ in t]) for t in trajs]
+    for i, traj in enumerate(trajs) : 
+        trajLen = len(traj)
+        D = squareform(pdist(np.concatenate((stateSamples, allStates[i]), axis=0)))
+        D = D[:nSamples, nSamples:]
+        indices = np.where(D < C.STATE_SIMILARITY_THRESH)
+        for j, k  in zip(*indices) : 
+            stateOccurenceIndices[j].append((i, k))
+    return stateOccurenceIndices
 
-    to the Acrobot environment. Inverse RL seems like
-    a fun thing because it retrieves the incentive 
-    mechanism underlying a particular behaviour.
+def generateStateSamples (trajs, nSamples) : 
+    """ get the distribution of start states """
+    allStates = [[s for s, _, _ in t] for t in trajs]
+    allStates = list(more_itertools.flatten(allStates))
+    states = np.random.sample(allStates, k=nSamples)
+    states = np.array(states)
+    return states
 
-    Should find out how to do this on Humans.
-
-    Examples
-    --------
-    >>> env = gym.make('Acrobot-v1')
-    >>> agent = Agents.REINFORCE('./Models/acrobotMimicer.pkl')  
-    >>> gamma = 0.99
-    >>> bases = acrobotRewardBases(0.4, 0.4)
-    >>> valBases = [FeedForwardNetwork([6, 3]) for _ in range(len(bases))]
-    >>> R = inverseRL(env, agent, gamma, monteCarlo, bases, valBases)
-
-    Parameters
-    ----------
-    env : object
-        An OpenAI environment. 
-    agent : object
-        A policy i.e. a mapping from 
-        states to actions.
-    gamma : float
-        The discount factor.
-    valueEstimator : function
-        Algorithm which estimates value
-        function. Examples are monteCarlo
-        and td0 present in 
-        ValueApproximation.py.
-    featureExtractor : function
-        Ouputs a succint representation
-        of the state.
-    rewardBases : list
-        List of basis functions 
-        characterizing the reward.
-    valueBases : 
-        List of value function 
-        approximators that will be 
-        tuned to fit the reward basis
-        and policy.
+def estimateValueFromTrajs (stateIndices, trajs, rewardFn) :
+    """ 
+    Estimate the value for each state from expert 
+    trajectories.
     """
+    def computeReturnOnTraj (traj) : 
+        R = [rewardFn(s) for s, _, _ in traj]
+        return computeReturns(R, C.GAMMA)[0]
 
-    def setupObjective() : 
-        """
-        Encode the LP objective from the paper.
-        """
-        nonlocal problem
-        alphas = [LpVariable(f'a{i}', -1, 1) for i in range(len(valueBases))]
-        actions = set(range(env.action_space.n))
-        bs = []
-        for i, s in enumerate(stateSamples) : 
-            b = LpVariable(f'b{i}')
-            bs.append(b)
-            a = agent(s)
-            s1 = toTensor(sampleNextState(env, s, a))
-            for ai in actions - {a} : 
-                si = toTensor(sampleNextState(env, s, ai))
-                coeffs = [(vFn(s1)-vFn(si)).item() for vFn in valueBases]
-                terms = [c * a for c, a in zip(coeffs, alphas)]
-                constraint1 = b <= 2 * lpSum(terms)
-                constraint2 = b <= lpSum(terms)
-                problem += constraint1
-                problem += constraint2
-        problem += lpSum(bs)
-            
-    def rewardFunction (s) : 
-        rTotal = 0
-        for a, fn in zip(alphas, rewardBases) : 
-            rTotal += (a * fn(s))
-        return rTotal
+    values = []
+    for i, indices in enumerate(stateIndices) : 
+        truncatedTrajs = [trajs[i][j:] for i, j in indices] 
+        vhat = np.mean([computeReturnOnTraj(t) for t in truncatedTrajs])
+        values.append(vhat)
+    return values
 
-    trajectory = getTrajectory(env, agent)
-    stateSamples = [t[0] for t in trajectory]
+def estimateValueFromAgent (stateSamples, agent) : 
+    """
+    Use the learnt value function network through
+    A2C to estimate value for states.
+    """
+    return list(map(
+        reduce(compose, [float, 
+                         agent.model.v, 
+                         lambda t : t.float(), 
+                         torch.tensor]),
+        stateSamples))
 
-    # Tweak the value function approximator's 
-    # parameters to fit to the value function
-    # under given policy and for each reward
-    # basis.
-    for vFn, rFn in zip(valueBases, rewardBases) :
-        valueEstimator(vFn, rFn, env, agent, featureExtractor,  gamma, 1e-1)
+def getAllTraj () : 
+    """ get all trajectories from C.TRAJ_DIR """
+    def loadPickle (f) : 
+        with open(osp.join(C.TRAJ_DIR, f), 'rb') as fd : 
+            return pickle.load(fd)
+    return list(map(loadPickle, os.listdir(C.TRAJ_DIR)))
 
-    problem = LpProblem('Inverse RL Problem', LpMaximize)
-    setupObjective()
-    problem.solve()
-    alphas = [a.varValue for a in problem.variables() if a.name.startswith('a')]
-    return rewardFunction
+def irl (rewardFnSpace) :
+    """
+    Find the explanatory reward function for expert's 
+    policy in the space of reward functions.
+    """
+    import pdb
+    pdb.set_trace()
+    trajs = getAllTraj()
+    stateSamples = generateStateSamples(trajs, C.IRL_STATE_SAMPLES)
+    indices = findSamplesInTrajs(stateSamples, trajs) 
+    for i in range(C.IRL_ITR) : 
+        rewardFn = rewardFnSpace.current()
+        agent = findOptimalAgent(rewardFn)
+        env = rlpyt_make(rewardFn)
+        expertValues = [estimateValueFromTrajs(indices, trajs, _) 
+                        for _ in rewardFnSpace.rewardBases]
+        inferiorValues = estimateValueFromAgent(stateSamples, agent) 
+        rewardFnSpace.refine(expertValues, inferiorValues)
+    return pi, rewardFn
 
 if __name__ == "__main__" :
-    xRange = np.arange(-np.pi, np.pi, 0.1)
-    yRange = np.arange(-np.pi, np.pi, 0.1)
-    plotFunction(lambda x, y : (-1 + (-np.cos(x) - np.cos(x + y) > 1)), xRange, yRange, 'theta1', 'theta2', 'reward')
-    env = gym.make('Acrobot-v1')
-    agent = Agents.REINFORCE('./Models/acrobotMimicer.pkl')  
-    gamma = 0.7
-    bases = acrobotRewardBases(0.5, 0.5)
-    valBases = [FeedForwardNetwork([6, 1]) for _ in bases]
-    featureExtractor = lambda s : toInternalStateRep(s)[:2]
-    R = inverseRL(env, agent, gamma, td1, featureExtractor, bases, valBases)
-    plotFunction(lambda x, y : R([x, y, 0, 0, 0, 0]), xRange, yRange, 'theta1', 'theta2', 'reward')
+    irl (acrobotRewardBases(np.pi / 4, np.pi / 4))
