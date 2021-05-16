@@ -34,7 +34,7 @@ class RewardFnSpace () :
     def _estimatedValueExpressions (self, stateValuesForBases) :
         svfb = np.array(stateValuesForBases)
         alphas = np.array(self.alphas)
-        estimates = (svfb.T * alphas).sum(axis=0).tolist()
+        estimates = (svfb.T * alphas).sum(axis=1).tolist()
         return estimates
 
     def _setCoeffs (self) : 

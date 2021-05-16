@@ -1,12 +1,13 @@
 from Utils import *
 from RewardFnSpace import *
 from functional import compose
-from functools import partial, reduce
+from functools import partial, reduce, lru_cache
 from itertools import product
 import numpy as np
 import scipy.integrate
 import gym
 
+@lru_cache(maxsize=128)
 def findTheta (sin, cos) :
     """
     Calculate theta in radians
@@ -31,6 +32,7 @@ def findTheta (sin, cos) :
     else : 
         return -np.pi + np.arctan(sin / cos)
         
+@lru_cache(maxsize=128)
 def toInternalStateRep (s) : 
     """
     The acrobot environment maintains an
@@ -56,7 +58,7 @@ def toInternalStateRep (s) :
     """
     theta1 = findTheta(s[1], s[0])
     theta2 = findTheta(s[3], s[2])
-    return np.array([theta1, theta2, s[4], s[5]])
+    return (theta1, theta2, s[4], s[5])
 
 def toExternalStateRep (s) : 
     """
@@ -111,60 +113,6 @@ def wrap(x, m, M):
         x = x + diff
     return x
 
-def sampleNextState (env, s, a) : 
-    """
-    The OpenAI Acrobot environment doesn't 
-    let us sample states according to P(s, a)
-    for a particular state s and action a. It
-    always updates to the next state.
-
-    To avoid this difficulty, I pulled out code
-    from acrobot.py file in the gym repository
-    so that we can do the next state computation
-    without actually transitioning to it.
-
-    Apply torque based on the given
-    action and integrate to get the new position
-    of the system.
-    
-    Examples 
-    --------
-    >>> env = gym.make('Acrobot-v1')
-    >>> s = env.reset()
-    >>> s1 = sampleNextState(env, s, 2)
-    >>> s2, _, _, _ = env.step(2)
-    >>> print(np.linalg.norm(s1 - s2))
-
-    Parameters
-    ----------
-    env : object
-        OpenAI gym environment.
-    s : array-like
-        State.
-    a : int
-        Action.
-    """
-    s = toInternalStateRep(s)
-    torque = env.AVAIL_TORQUE[a]
-
-    s_augmented = np.append(s, torque)
-
-    dsdt = lambda t, y : env.env._dsdt(y, t)
-
-    integrator = scipy.integrate.RK45(dsdt, 0, s_augmented, env.dt)
-    while integrator.t < integrator.t_bound : 
-        integrator.step()
-
-    ns = integrator.y
-    ns = ns[:4]  
-
-    ns[0] = wrap(ns[0], -np.pi, np.pi)
-    ns[1] = wrap(ns[1], -np.pi, np.pi)
-    ns[2] = bound(ns[2], -env.MAX_VEL_1, env.MAX_VEL_1)
-    ns[3] = bound(ns[3], -env.MAX_VEL_2, env.MAX_VEL_2)
-
-    return toExternalStateRep(ns)
-
 def stepFunction (s, xRange, yRange) :
     """
     A step function in R^2. Given
@@ -196,11 +144,11 @@ def acrobotRewardBases (delX, delY) :
     bases = []
     for x, y in product(xs, ys) : 
         x_, y_ = x + delX, y + delY
-        fn = compose(
-            partial(stepFunction, 
+        fn = reduce(compose, 
+            [partial(stepFunction, 
                 xRange=(x, x_), 
                 yRange=(y, y_)),
-            toInternalStateRep
-        )
+             toInternalStateRep,
+             tuple])
         bases.append(Reward(fn, (-1, 0)))
     return bases

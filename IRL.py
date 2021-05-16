@@ -91,8 +91,6 @@ def irl (rewardFnSpace) :
         expertValues = [estimateValueFromTrajs(indices, trajs, _) 
                         for _ in rewardFnSpace.rewardBases]
         inferiorValues = estimateValueFromAgent(stateSamples, agent) 
-        import pdb
-        pdb.set_trace()
         rewardFnSpace.refine(expertValues, inferiorValues)
     return pi, rewardFn
 
