@@ -1,3 +1,4 @@
+""" Wrap a reward function and store it's range. """
 class Reward () :
     def __init__ (self, rewardFn, reward_range): 
         self.rewardFn = rewardFn

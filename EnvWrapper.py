@@ -1,3 +1,9 @@
+""" 
+Wrapping environment to allow custom reward function,
+custom initial state and custom internal state
+function to convert observations to environment's 
+internal state.
+"""
 from rlpyt.envs.gym import *
 import gym 
 

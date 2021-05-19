@@ -1,3 +1,7 @@
+"""
+Convenience functions for plotting 2D scalar functions
+and histograms.
+"""
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -8,19 +12,6 @@ def plotFunction (f, xRange, yRange, xLabel, yLabel, zLabel) :
     """
     Create a 3D plot of the function 
     over xRange x yRange.
-    
-    Examples
-    --------
-    >>> xRange = np.arange(-1, 1, 0.1)
-    >>> yRange = np.arange(-1, 1, 0.1)
-    >>> plotFunction(lambda x, y : x + y, xRange, yRange)
-
-    Parameters
-    ----------
-    f : function
-        Function from R^2 to R.
-    xRange : array-like
-    yRange : array-like
     """
 
     F = np.vectorize(f)
@@ -37,6 +28,11 @@ def plotFunction (f, xRange, yRange, xLabel, yLabel, zLabel) :
     plt.show()
 
 def plotHist (samples, xRange, yRange, xLabel, yLabel, zLabel) : 
+    """
+    Visualize a distribution over two random variables.
+    Stolen from :
+        https://matplotlib.org/stable/gallery/mplot3d/hist3d.html
+    """
     fig = plt.figure()
     ax = fig.add_subplot(projection='3d')
     x, y = samples[:, 0], samples[:, 1]

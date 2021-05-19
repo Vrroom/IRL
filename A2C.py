@@ -1,3 +1,4 @@
+""" Runner for rlpyt's A2C """
 from Network import *
 from rlpyt.samplers.serial.sampler import SerialSampler
 from rlpyt.samplers.parallel.gpu.sampler import GpuSampler
@@ -7,11 +8,15 @@ from rlpyt.runners.minibatch_rl import MinibatchRl
 from rlpyt.utils.logging.context import logger_context
 from EnvWrapper import rlpyt_make
 import Config as C
-import pandas as pd
 import os
 import os.path as osp
 
 def findOptimalAgent (reward, run_ID=0) : 
+    """
+    Find the optimal agent for the MDP (see Config for 
+    specification) under a custom reward function
+    using rlpyt's implementation of A2C.
+    """
     cpus = list(range(C.N_PARALLEL))
     affinity = dict(cuda_idx=C.CUDA_IDX, workers_cpus=cpus)
     sampler = SerialSampler(

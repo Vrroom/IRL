@@ -1,3 +1,7 @@
+""" 
+Evaluate an agent based on average number of
+steps to finish an environment
+"""
 from tqdm import tqdm
 import os
 import os.path as osp
@@ -11,6 +15,7 @@ from Network import *
 from collections import namedtuple
 
 def simulateAgentFile (agentFile, render=False) :
+    """ Load rlpyt agent from file and simulate  """
     state_dict = torch.load(
         agentFile, 
         map_location=torch.device('cpu'))["agent_state_dict"]
@@ -20,6 +25,10 @@ def simulateAgentFile (agentFile, render=False) :
     simulateAgent(agent, render)
 
 def simulateAgent (agent, render=False) : 
+    """ 
+    Simulate agent on environment till the task
+    is over and return the number of steps taken
+    """
     env = gym.make('Acrobot-v1')
     EnvSpace = namedtuple('EnvSpace', ['action', 'observation'])
     done = False

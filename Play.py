@@ -1,3 +1,7 @@
+""" 
+Run this to play an environment and record trajectories. 
+Trajectories are saved in C.TRAJ_DIR as pickle files.
+"""
 import os
 import os.path as osp
 import pickle

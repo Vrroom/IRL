@@ -5,7 +5,6 @@ import random
 random.seed(C.SEED)
 from RewardFnSpace import *
 import pickle
-import gym
 import more_itertools
 from AcrobotUtils import *
 from scipy.spatial.distance import pdist, squareform
@@ -83,7 +82,7 @@ def estimateValueFromAgent (stateSamples, agent, rewardFn) :
         sampler.initialize(
             agent=agent_,
             affinity=affinity,
-            seed=0
+            seed=C.SEED
         )
         _, traj_info = sampler.obtain_samples(0)
         returns = [t['DiscountedReturn'] for t in traj_info]

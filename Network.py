@@ -1,3 +1,7 @@
+""" 
+Network for the A2C agent. An A2C agent
+has a value network and a policy network. 
+"""
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -6,7 +10,7 @@ import Config as C
 
 class AcrobotNet (nn.Module) :
     """
-    Simple multi-layer feed forward network
+    Simple multi-layer feed forward networks
     with ReLU non linearity.
     """
     def __init__ (self, s=C.OBSERVATION_SPACE, 

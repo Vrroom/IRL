@@ -1,3 +1,4 @@
+""" Sanity checks for different components of the algorithm """
 from Reward import Reward
 from RewardFnSpace import RewardFnSpace
 from AcrobotUtils import *
@@ -6,6 +7,10 @@ from A2C import *
 from IRL import *
 
 def test_l1norm () : 
+    """ 
+    Test whether I have written the objective and
+    constraints for ||1 - alpha||_1 in LP correctly.
+    """
     n = 10
     rfs = RewardFnSpace(list(range(n)))
     for i in range(10): 
@@ -17,6 +22,11 @@ def test_l1norm () :
     assert(np.linalg.norm(coeffs - np.ones(n)) < 1e-4)
 
 def test_acrobotbases (): 
+    """
+    Test whether the acrobot reward bases are
+    step functions over the space of angles of the
+    two links by visualizing them.
+    """
     xRange = np.arange(-np.pi, np.pi, 0.1)
     yRange = np.arange(-np.pi, np.pi, 0.1)
     acrobotBases = acrobotRewardBases(np.pi, np.pi)
@@ -26,6 +36,15 @@ def test_acrobotbases ():
         plotFunction(f, xRange, yRange, 'theta1', 'theta2', 'R')
 
 def test_optimalagentfinder () :
+    """
+    Test the A2C algorithm for finding 
+    the optimal policy and value function under a
+    given reward.
+
+    Visualize the chosen reward function and the
+    optimal value function and confirm that the
+    trends across them are similar.
+    """
     def valNetwork (s) : 
         s = s.float()
         v = reduce(model.withReluDropout, model.v[:-1], s)
@@ -44,8 +63,11 @@ def test_optimalagentfinder () :
     plotFunction(valFn, xRange, yRange, 'theta1', 'theta2', 'V')
 
 def test_piecewiselinearlp1 () :
-    # maximize min(x, 2 * x) ; -10 <= x <= 10
-    # expected answer: x = 10.
+    """
+    Test Maximize min(x, 2 * x) type LPs
+    Bounds on x: -10 <= x <= 10
+    Expected answer: x = 10.
+    """
     lp = LpProblem('test', LpMaximize)
     x = LpVariable('x', -10, 10)
     t = LpVariable('t')
@@ -57,9 +79,12 @@ def test_piecewiselinearlp1 () :
     assert(abs(optimum - 10) < 1e-3)
 
 def test_piecewiselinearlp2 () : 
-    # maximize (min(x, 2 * x) + min(3 * x, 4 * x)) 
-    # -10 <= x <= 10
-    # expected answer: x = 40
+    """
+    Test Maximize \sum_i min(a_i * x, b_i * x) type LPs.
+    Objective: maximize (min(x, 2 * x) + min(3 * x, 4 * x)) 
+    Constraints: -10 <= x <= 10
+    Expected answer: x = 40
+    """
     lp = LpProblem('test', LpMaximize)
     x = LpVariable('x', -10, 10)
     t1 = LpVariable('t1')
@@ -74,6 +99,13 @@ def test_piecewiselinearlp2 () :
     assert(abs(optimum - 40) < 1e-3)
 
 def test_traj () :
+    """
+    Test the trajectory loader method and visualize 
+    the state distribution. It is expected that most 
+    of the states will be in the center because that 
+    corresponds to when both the links are down,
+    the starting state.
+    """
     samples = getAllTraj()
     states = []
     for t in samples : 
@@ -84,6 +116,10 @@ def test_traj () :
     plotHist(states, xRange, yRange, 'theta1', 'theta2', 'S Count')
 
 def test_sampling1 (): 
+    """
+    Test sampling trajectory given a particular 
+    starting state.
+    """
     cpus = list(range(C.N_PARALLEL))
     affinity = dict(cuda_idx=C.CUDA_IDX, workers_cpus=cpus)
     agent_ = findOptimalAgent(reward=None)
@@ -106,6 +142,12 @@ def test_sampling1 ():
     print(np.mean([t['DiscountedReturn'] for t in traj_info]))
 
 def test_sampling2 () :
+    """
+    Test sampling given a particular reward function 
+    and a starting state. Confirm that the region
+    with low reward corresponds to state with low
+    value.
+    """
     delta = 2 * np.pi / 3
     r = Reward(partial(stepFunction, 
                        xRange=(-delta/2, delta/2), 

@@ -1,3 +1,23 @@
+""" 
+Utility functions specific to Acrobot-v1.
+I think a lot of OpenAI environments make 
+the distinction between the state, which is 
+an environment's internal representation 
+and the observation, which is presented to
+the agent. This file has conversion functions
+between them as they are often needed. 
+
+The acrobot reward bases are also found here.
+It is difficult to figure out a common way of
+determining bases for all environments. There is
+always some critical information that simplifies the
+design of the bases and this is different for
+each environment. For example, the reward function
+of Acrobot-v1 depends solely on the angles of
+the two links and not the angu]ar velocities (which
+are part of the observation), thus simplifying 
+the bases functions.
+"""
 from Utils import *
 from Reward import Reward
 from functional import compose
@@ -9,11 +29,10 @@ import gym
 
 def findTheta (sin, cos) :
     """
-    Calculate theta in radians
-    from sin and cosine values.
+    Calculate theta in radians from sin 
+    and cosine values.
 
-    The output is in the range 
-    [-pi, pi]
+    The output is in the range [-pi, pi]
 
     Parameters
     ----------

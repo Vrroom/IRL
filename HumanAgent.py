@@ -1,3 +1,7 @@
+"""
+Interact with the environment using arrow keys.
+Currently only tailored to Acrobot-v1.
+"""
 import torch
 import random
 
