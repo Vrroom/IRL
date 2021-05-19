@@ -35,3 +35,24 @@ def plotFunction (f, xRange, yRange, xLabel, yLabel, zLabel) :
     ax.set_ylabel(yLabel)
     ax.set_zlabel(zLabel)
     plt.show()
+
+def plotHist (samples, xRange, yRange, xLabel, yLabel, zLabel) : 
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    x, y = samples[:, 0], samples[:, 1]
+    xm, xM = xRange.min(), xRange.max()
+    ym, yM = yRange.min(), yRange.max()
+    bins = max(xRange.size, yRange.size)
+    hist, xedges, yedges = np.histogram2d(x, y, bins=bins, range=[[xm, xM], [ym, yM]])
+    xpos, ypos = np.meshgrid(xedges[:-1], yedges[:-1], indexing="ij")
+    xpos = xpos.ravel()
+    ypos = ypos.ravel()
+    zpos = 0
+    dx = dy = np.ones_like(zpos)
+    dz = hist.ravel()
+    ax.bar3d(xpos, ypos, zpos, dx, dy, dz, zsort='average')
+    ax.set_xlabel(xLabel)
+    ax.set_ylabel(yLabel)
+    ax.set_zlabel(zLabel)
+    plt.show()
+

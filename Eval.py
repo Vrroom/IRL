@@ -10,13 +10,18 @@ from rlpyt.agents.pg.categorical import CategoricalPgAgent
 from Network import *
 from collections import namedtuple
 
-def simulateAgent (agentFile, render=False) : 
-    env = gym.make('Acrobot-v1')
-    EnvSpace = namedtuple('EnvSpace', ['action', 'observation'])
-    state_dict = torch.load(agentFile, map_location=torch.device('cpu'))["agent_state_dict"]
+def simulateAgentFile (agentFile, render=False) :
+    state_dict = torch.load(
+        agentFile, 
+        map_location=torch.device('cpu'))["agent_state_dict"]
     agent = CategoricalPgAgent(AcrobotNet)
     agent.initialize(EnvSpace(env.action_space, env.observation_space))
     agent.load_state_dict(state_dict)
+    simulateAgent(agent, render)
+
+def simulateAgent (agent, render=False) : 
+    env = gym.make('Acrobot-v1')
+    EnvSpace = namedtuple('EnvSpace', ['action', 'observation'])
     done = False
     trajectory = []
     s = torch.tensor(env.reset()).float()
@@ -40,7 +45,9 @@ def main () :
     DIR = './a2c_acrobot-v1/run_0'
     agentFiles = os.listdir(DIR)
     agentFiles = [osp.join(DIR, f) for f in agentFiles if f.endswith('pkl')]
-    scores = [np.mean([simulateAgent(f, render=True) for _ in range(10)]) for f in tqdm(agentFiles)]
+    scores = [np.mean([
+        simulateAgentFile(f, render=True) for _ in range(10)]) 
+              for f in tqdm(agentFiles)]
     bestFile = agentFiles[np.argmin(scores)]
     print(bestFile, min(scores))
 

@@ -1,2 +1,4 @@
 logs*
 a2c*
+__pycache__
+*.log

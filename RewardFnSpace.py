@@ -1,21 +1,24 @@
 from pulp import *
 import Config as C
+from Reward import Reward
 from more_itertools import unzip
 import numpy as np
+import logging
+logging.basicConfig(filename='irl.log', level=logging.INFO)
 
 class RewardFnSpace () : 
 
     def __init__ (self, rewardBases) : 
         self.rewardBases = rewardBases
-        self.rng = np.random.RandomState(0)
+        self.rng = np.random.RandomState(C.SEED)
         self._initializeLP ()
 
     def _initializeLP (self) : 
         self.lp = LpProblem('IRL', LpMaximize)
         self.y1s, self.y2s, self.alphas, self.bs = [], [], [], []
         for i, _ in enumerate(self.rewardBases):  
-            y1 = LpVariable(f'y1{i}')
-            y2 = LpVariable(f'y2{i}')
+            y1 = LpVariable(f'y1_{i}')
+            y2 = LpVariable(f'y2_{i}')
             self.y1s.append(y1)
             self.y2s.append(y2)
             self.alphas.append(1 - (y1 - y2))
@@ -38,9 +41,7 @@ class RewardFnSpace () :
         return estimates
 
     def _setCoeffs (self) : 
-        y1s = [y.varValue for y in self.y1s]
-        y2s = [y.varValue for y in self.y2s]
-        self.coeffs = [1 - (y1 - y2) for y1, y2 in zip(y1s, y2s)]
+        self.coeffs = [value(a) for a in self.alphas]
 
     def current (self) : 
         pairs = list(zip(self.coeffs, self.rewardBases))
@@ -51,27 +52,16 @@ class RewardFnSpace () :
         rMax = max(c * M for c, M in zip(self.coeffs, maxs))
         return Reward(fn, (rMin, rMax))
 
-    def refine (self, expertValues, inferiorEstimates) :
+    def refine (self, expertValues, inferiorValues) :
         n = len(self.bs)
         expertEstimates = self._estimatedValueExpressions(expertValues)
+        inferiorEstimates = self._estimatedValueExpressions(inferiorValues)
         for i, (exp, inf) in enumerate(
                 zip(expertEstimates, inferiorEstimates)) : 
-            b = LpVariable(f'b{n + i}')
+            b = LpVariable(f'b_{n + i}')
             self.lp += b <= 2 * (exp - inf)
             self.lp += b <=     (exp - inf)
             self.bs.append(b)
         self.lp += lpSum(self.bs) + self.l1Term
         self.lp.solve()
         self._setCoeffs()
-
-class Reward () :
-    def __init__ (self, rewardFn, reward_range): 
-        self.rewardFn = rewardFn
-        self.reward_range = reward_range
-
-    def __call__ (self, s) :
-        r = self.rewardFn(s)
-        lo, hi = self.reward_range
-        assert(lo <= r <= hi)
-        return r
-

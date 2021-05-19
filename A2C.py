@@ -10,18 +10,15 @@ import Config as C
 import pandas as pd
 import os
 import os.path as osp
-from bayes_opt import BayesianOptimization
-from bayes_opt.event import DEFAULT_EVENTS, Events
-from bayes_opt.logger import JSONLogger
 
-def findOptimalAgent (reward, run_ID=0, cuda_idx=None, n_parallel=8) : 
-    cpus = list(range(n_parallel))
-    affinity = dict(cuda_idx=cuda_idx, workers_cpus=cpus)
+def findOptimalAgent (reward, run_ID=0) : 
+    cpus = list(range(C.N_PARALLEL))
+    affinity = dict(cuda_idx=C.CUDA_IDX, workers_cpus=cpus)
     sampler = SerialSampler(
         EnvCls=rlpyt_make,
         env_kwargs=dict(id=C.ENV, reward=reward),
         batch_T=C.BATCH_T,  
-        batch_B=16,  # 16 parallel environments.
+        batch_B=C.BATCH_B,  
         max_decorrelation_steps=400,
         eval_env_kwargs=dict(id=C.ENV),
         eval_n_envs=5,
@@ -48,4 +45,3 @@ def findOptimalAgent (reward, run_ID=0, cuda_idx=None, n_parallel=8) :
                         snapshot_mode='last', override_prefix=True):
         runner.train()
     return agent
-

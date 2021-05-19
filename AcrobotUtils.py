@@ -1,5 +1,5 @@
 from Utils import *
-from RewardFnSpace import *
+from Reward import Reward
 from functional import compose
 from functools import partial, reduce, lru_cache
 from itertools import product
@@ -7,7 +7,6 @@ import numpy as np
 import scipy.integrate
 import gym
 
-@lru_cache(maxsize=128)
 def findTheta (sin, cos) :
     """
     Calculate theta in radians
@@ -32,7 +31,6 @@ def findTheta (sin, cos) :
     else : 
         return -np.pi + np.arctan(sin / cos)
         
-@lru_cache(maxsize=128)
 def toInternalStateRep (s) : 
     """
     The acrobot environment maintains an

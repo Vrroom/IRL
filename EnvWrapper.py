@@ -3,7 +3,7 @@ import gym
 
 class RewarableEnv () : 
 
-    def __init__ (self, env, reward=None) :
+    def __init__ (self, env, reward=None, internalStateFn=lambda x : x, s0=None) :
         self.env = env
         self.action_space = env.action_space
         self.observation_space = env.observation_space
@@ -13,6 +13,8 @@ class RewarableEnv () :
         else :
             self.reward_range = reward.reward_range
         self.reward = reward
+        self.internalStateFn = internalStateFn
+        self.s0 = s0
 
     def step (self, a) : 
         s, r, d, i = self.env.step(a)
@@ -22,7 +24,11 @@ class RewarableEnv () :
             return s, self.reward(s), d, i
 
     def reset (self) : 
-        return self.env.reset()
+        o = self.env.reset()
+        if self.s0 is not None :
+            self.env.env.state = self.internalStateFn(self.s0)
+            o = self.s0
+        return o
 
     def render (self, mode='Human') : 
         return self.env.render(mode)
@@ -36,9 +42,13 @@ class RewarableEnv () :
     def setRewardFn(self, reward) : 
         self.reward = reward
 
-def rlpyt_make(*args, info_example=None, reward=None, **kwargs):
+    def setState (self, state) : 
+        self.env.state = self.internalStateFn(state)
+
+def rlpyt_make(*args, info_example=None, reward=None, s0=None,
+               internalStateFn=lambda x: x, **kwargs):
     env  = gym.make(*args, **kwargs)
-    renv = RewarableEnv(env, reward)
+    renv = RewarableEnv(env, reward, internalStateFn, s0)
     if info_example is None:
         return GymEnvWrapper(renv)
     else:

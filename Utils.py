@@ -30,7 +30,7 @@ def getTrajectory (env, agent) :
         s = s_
     return trajectory
 
-def computeReturns(R, gamma, normalize=True) : 
+def computeReturns(R, gamma, normalize=False) : 
     g = 0
     G = []
     for r in R[::-1] : 
