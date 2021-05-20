@@ -17,21 +17,30 @@ $ cd .. && python3 IRL.py
 
 ## Example
 
+The Acrobot-v1 is a double pendulum system. An agent can give clockwise or counterclockwise torque. The goal is to get the bottom link at a particular height. I played with this environment and accumulated 100 trajectories. These were the inputs to the IRL algorithm.
 
-## Algorithm
+The reward function is specified as a function of the angle that top link makes with the vertical `theta1` and the angle the bottom link makes with respect to the top link `theta2`. `theta1` and `theta2` are in the range `[-PI, PI]`. The plot on the left in the table below is the true reward function. The plot on the right is the reward function recovered from observed behaviour. Even though the two plots don't match over the whole domain, they match in a crucial region of the domain. The points near the origin correspond to the starting position, where `theta1 = theta2 = 0` and both the links point downwards. Both reward functions incentivize getting out of this region. My guess is that once the agent is out of this region, it has acquired sufficient kinetic energy such that it will finish the task eventually, even if no further action is taken.
 
-<!-- This section requires knowledge of the MDP Planning and the Reinforcement Learning Problem. See [Sutton and Barto](http://incompleteideas.net/book/RLbook2020.pdf) if required. Also, I'll start using the word *policy* instead of *behaviour* to be consistent with the standard terminology.  -->
+<table>
+  <tr>
+    <td> <img width="256" src="https://user-images.githubusercontent.com/7254326/118997340-36cc4b00-b9a6-11eb-9477-572415c4b647.png" /> </td>
+    <td> <img width="256" src="https://user-images.githubusercontent.com/7254326/119001218-6a5ca480-b9a9-11eb-9e90-022e07d77748.png" /> </td>
+  </tr>
+</table>
 
-There are a few key components of the algorithm:
+The optimal policy under the recovered reward function can be seen below. This policy is also accomplishes the task. 
 
-1. _Observed Behaviour_: I played the Acrobot-v1 Environment over and over again and collected trajectories. Use [Play.py](https://github.com/Vrroom/IRL/blob/master/Play.py) to create trajectories for your environment.
-2. _Linearly parameterized space of reward functions_: A reward function in this space is a linear combination of a fixed set of basis functions. I chose rectangular step functions as the bases. The algorithm searches for the coefficients in the linear combination that best explain the observed behaviour.
+![acrobot](https://user-images.githubusercontent.com/7254326/119007009-80209880-b9ae-11eb-811d-e6ba0f3d169c.gif)
 
-<!-- 
-We assume that the observed policy is optimal for the underlying task and then iteratively shrink the space of reward function candidates. Initially, we guess a reward function and find the optimal policy under it. For a reward function to be a valid candidate, the value of the initial state under this new policy has to be less than or equal to that under the observed policy. This constraint shrinks the space of valid candidates. We find the *best* valid reward candidate (this step requires Linear Programming to optimize the objective which defines what is best). Again, an optimal policy is determined for this new reward function and further constraints are added.
+## Algorithm Overview 
 
- -->
+We assume that the observed policy is optimal for the underlying task and iteratively shrink the space of reward function candidates. Initially, we guess a reward function and find the optimal policy for it. Valid candidates for reward function satisfy that the value of the states under this new policy is less than or equal to that under the observed policy. This constraint shrinks the space of valid candidates. We find the *best* valid reward candidate, characterized by superiority of value of observed policy over the new policy. An optimal policy is determined for this new candidate and the cycle is repeated again. The outer loop described above can be found [here](https://github.com/Vrroom/IRL/blob/cd5f112ad4728fd12a19c09a7670ef037f6a00bc/IRL.py#L101). Reward Space shrinking can be found [here](https://github.com/Vrroom/IRL/blob/cd5f112ad4728fd12a19c09a7670ef037f6a00bc/RewardFnSpace.py#L102).
+ 
 ## Future Work
+
+1. I think that the main bottleneck stopping this work from being generalized to other environments is the reward bases are tied to the state space in these environments. There is no general way of choosing reward bases for all environments.
+2. Add Ziebart's _Maximum Entropy Inverse Reinforcement Learning_ and the more recent _Maximum Entropy Deep Inverse Reinforcement Learning_ by Wulfmeier.
+3. One criticism I have of this field of research is that it doesn't actually solve its motivation. The motivation was to recover the succint representation of the task from observed behavior. For example, "score a goal" or "cross the grey line". As we saw in the example, the reward function that we recovered, although explained the observed behaviour, didn't convey the meaning of the original reward function. This begs the question, what do we additional knowledge about the environment, does solving this problem give?
 
 ## References
 
