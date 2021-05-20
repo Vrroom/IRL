@@ -29,11 +29,12 @@ def test_acrobotbases ():
     """
     xRange = np.arange(-np.pi, np.pi, 0.1)
     yRange = np.arange(-np.pi, np.pi, 0.1)
-    acrobotBases = acrobotRewardBases(np.pi, np.pi)
+    acrobotBases = acrobotRewardBases(np.pi / 2, np.pi / 2)
     toExternal = lambda x, y : toExternalStateRep([x, y, 0, 0])
     for basis in acrobotBases : 
         f = compose(basis, toExternal)
         plotFunction(f, xRange, yRange, 'theta1', 'theta2', 'R')
+        plt.show()
 
 def test_optimalagentfinder () :
     """
@@ -172,4 +173,5 @@ if __name__ == "__main__" :
     test_acrobotbases()
     test_optimalagentfinder()
     test_traj()
+    test_sampling1()
     test_sampling2()

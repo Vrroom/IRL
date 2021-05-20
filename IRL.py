@@ -1,3 +1,4 @@
+""" Main reward optimization loop """
 import Config as C
 import numpy as np
 np.random.seed(C.SEED)
@@ -123,4 +124,6 @@ if __name__ == "__main__" :
     toExternal = lambda x, y : toExternalStateRep([x, y, 0, 0])
     RFn = compose(rewardFn, toExternal)
     plotFunction(RFn, xRange, yRange, 'theta1', 'theta2', 'R')
+    plt.savefig('recovered.png')
+    plt.show()
     simulateAgent(agent, render=True)
