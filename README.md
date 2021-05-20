@@ -40,7 +40,7 @@ We assume that the observed policy is optimal for the underlying task and iterat
 
 1. I think that the main bottleneck stopping this work from being generalized to other environments is the reward bases are tied to the state space in these environments. There is no general way of choosing reward bases for all environments.
 2. Add Ziebart's _Maximum Entropy Inverse Reinforcement Learning_ and the more recent _Maximum Entropy Deep Inverse Reinforcement Learning_ by Wulfmeier.
-3. One criticism I have of this field of research is that it doesn't actually solve its motivation. The motivation was to recover the succint representation of the task from observed behavior. For example, "score a goal" or "cross the grey line". As we saw in the example, the reward function that we recovered, although explained the observed behaviour, didn't convey the meaning of the original reward function. This begs the question, what do we additional knowledge about the environment, does solving this problem give?
+3. One criticism I have of this field of research is that it doesn't actually solve its motivation. The motivation was to recover the succint representation of the task from observed behavior. For example, "score a goal" or "cross the grey line". As we saw in the example, the reward function that we recovered, although explained the observed behaviour, didn't convey the meaning of the original reward function. This begs the question, what additional knowledge about the environment, does solving this problem give?
 
 ## References
 
